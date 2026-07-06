@@ -90,7 +90,11 @@ export class Visual implements IVisual {
 
         if (!categorical?.categories || !categorical.categories[0]) return;
         const dateCategory = categorical.categories[0];
-        const valuesMetadata = categorical.values || [];
+
+        // Explicitly typed array to satisfy strict noImplicitAny compiler rules
+        const valuesMetadata: powerbi.DataViewValueColumn[] = categorical.values 
+            ? Array.from(categorical.values) 
+            : [];
 
         let primaryMeasureIndex = -1;
         const secondaryMeasureIndices: number[] = [];
@@ -173,6 +177,8 @@ export class Visual implements IVisual {
         const l = this.settings.labelSettings;
 
         const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        
+        // Pass dynamic formatting choices to the DOM elements
         this.titleHeader
             .text(`${monthNames[referenceMonth]} ${referenceYear}`)
             .style("font-family", h.fontFamily)
@@ -298,7 +304,7 @@ export class Visual implements IVisual {
         });
     }
 
-    private syncSelectionState(nodes: ArrayLike<Element>, selectionIds: powerbi.visuals.ISelectionId[], dataMap: Record<string, ExtractedDataPoint>): void {
+    private syncSelectionState(nodes: ArrayLike<Element>, selectionIds: powerbi.extensibility.ISelectionId[], dataMap: Record<string, ExtractedDataPoint>): void {
         if (!selectionIds || selectionIds.length === 0) {
             d3.selectAll(".calendar-day-cell").style("opacity", 1.0);
             return;
@@ -311,7 +317,8 @@ export class Visual implements IVisual {
             const metrics = dataMap[matchKey];
 
             if (metrics) {
-                const isSelected = selectionIds.some(sid => (sid as powerbi.visuals.ISelectionId).equals(metrics.selectionId));
+                // Safely casts the extensibility ID to a visuals ID to access the strict .equals() method
+                const isSelected = selectionIds.some(sid => (sid as unknown as powerbi.visuals.ISelectionId).equals(metrics.selectionId));
                 d3.select(nodes[idx]).style("opacity", isSelected ? 1.0 : 0.3);
             }
         });
