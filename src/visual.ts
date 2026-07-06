@@ -311,7 +311,7 @@ export class Visual implements IVisual {
             const metrics = dataMap[matchKey];
 
             if (metrics) {
-                const isSelected = selectionIds.some(sid => sid.equals(metrics.selectionId));
+                const isSelected = selectionIds.some(sid => (sid as powerbi.visuals.ISelectionId).equals(metrics.selectionId));
                 d3.select(nodes[idx]).style("opacity", isSelected ? 1.0 : 0.3);
             }
         });
