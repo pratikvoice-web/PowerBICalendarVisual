@@ -23,8 +23,8 @@ jobs:
     - name: Install Project Dependencies
       run: npm install
 
-    - name: Install Power BI Visuals Tools Globally
-      run: sudo npm install -g powerbi-visuals-tools
+    - name: Install Stable Power BI Visuals Tools Globally
+      run: sudo npm install -g powerbi-visuals-tools@5.3.0
 
     - name: Verify Environment Compilation Setup
       run: |
