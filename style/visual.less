@@ -1,0 +1,82 @@
+.calendar-visual-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    user-select: none;
+
+    .calendar-header-row {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        text-align: center;
+        font-weight: 600;
+        font-size: 12px;
+        padding: 6px 0;
+        background-color: #f3f2f1;
+        border-bottom: 1px solid #d2d0ce;
+    }
+
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        grid-auto-rows: 1fr;
+        flex-grow: 1;
+        gap: 1px;
+        background-color: #d2d0ce;
+        border: 1px solid #d2d0ce;
+
+        .calendar-day-cell {
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 6px;
+            box-sizing: border-box;
+            transition: opacity 0.15s ease-in-out;
+
+            &.empty-cell {
+                background-color: #faf9f8;
+            }
+
+            .day-number {
+                align-self: flex-end;
+                font-size: 11px;
+                font-weight: 600;
+                color: #323130;
+            }
+
+            .primary-measure-value {
+                font-size: 14px;
+                font-weight: 700;
+                text-align: center;
+                color: #111111;
+                margin: auto 0;
+                word-break: break-word;
+            }
+
+            .secondary-measures-list {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+                font-size: 9.5px;
+                color: #555555;
+                border-top: 1px solid rgba(0,0,0,0.05);
+                padding-top: 4px;
+
+                .secondary-metric-row {
+                    display: flex;
+                    justify-content: space-between;
+                    span.metric-label {
+                        font-weight: 600;
+                    }
+                    span.metric-value {
+                        font-weight: 700;
+                        color: #222222;
+                    }
+                }
+            }
+        }
+    }
+}
