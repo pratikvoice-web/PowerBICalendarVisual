@@ -1,7 +1,7 @@
 {
   "visual": {
-    "name": "PowerBICalendarVisual",
-    "displayName": "Advanced Calendar Grid",
+    "name": "CalendarGridPro",
+    "displayName": "Calendar Grid Pro",
     "guid": "PowerBICalendarVisualF1A2B3C4D5E6",
     "visualClassName": "Visual",
     "version": "1.0.0.0",
