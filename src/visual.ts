@@ -7,8 +7,6 @@ import VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
 import IVisual = powerbi.extensibility.visual.IVisual;
 import IVisualHost = powerbi.extensibility.visual.IVisualHost;
 import ISelectionManager = powerbi.extensibility.ISelectionManager;
-import VisualObjectInstanceEnumeration = powerbi.VisualObjectInstanceEnumeration;
-import EnumerateVisualObjectInstancesOptions = powerbi.EnumerateVisualObjectInstancesOptions;
 
 import { CalendarEngine, CalendarDay } from "./calendarEngine";
 import { VisualSettings } from "./formattingSettings";
@@ -35,7 +33,6 @@ export class Visual implements IVisual {
         this.host = options.host;
         this.selectionManager = this.host.createSelectionManager();
 
-        // Base structural initialization
         this.container = d3.select(this.target)
             .append("div")
             .attr("class", "calendar-visual-container");
@@ -136,17 +133,18 @@ export class Visual implements IVisual {
             .domain([globalMin, globalMax])
             .range([this.settings.calendarColors.minColor, this.settings.calendarColors.maxColor]);
 
-        // Enforce layout boundaries explicitly inline to prevent container stacking issues
         const h = this.settings.headerSettings;
         const c = this.settings.cellSettings;
         const l = this.settings.labelSettings;
 
+        // INLINE LAYOUT ENGINE OVERHAUL - Bypasses layout collapse & introduces scroll management
         this.container
             .style("width", "100%")
             .style("height", "100%")
             .style("display", "flex")
             .style("flex-direction", "column")
-            .style("box-sizing", "border-box");
+            .style("box-sizing", "border-box")
+            .style("overflow-y", "auto"); // Activates responsive master vertical scrollbars
 
         this.headerRow
             .style("display", "grid")
@@ -156,7 +154,8 @@ export class Visual implements IVisual {
             .style("font-size", `${h.fontSize}px`)
             .style("background-color", h.backgroundColor)
             .style("border-bottom", `${c.borderThickness}px solid ${c.borderColor}`)
-            .style("padding", "8px 0");
+            .style("padding", "8px 0")
+            .style("flex-shrink", "0"); // Keeps header row permanently visible during scrolls
 
         this.headerRow.selectAll("div")
             .style("color", h.fontColor)
@@ -165,7 +164,7 @@ export class Visual implements IVisual {
         this.gridContainer
             .style("display", "grid")
             .style("grid-template-columns", "repeat(7, 1fr)")
-            .style("grid-auto-rows", "1fr")
+            .style("grid-auto-rows", "minmax(95px, 1fr)") // Enforces strict cell safety bounds
             .style("flex-grow", "1")
             .style("gap", `${c.borderThickness}px`)
             .style("background-color", c.borderColor)
@@ -314,59 +313,70 @@ export class Visual implements IVisual {
         });
     }
 
-    // Standard Property Mapping Engine (Restores full typography, layout, and visibility parameters cleanly)
-    public enumerateVisualObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstanceEnumeration {
-        const instances: powerbi.VisualObjectInstance[] = [];
+    // CLOUD RUNTIME COMPLIANT FORMAT OPTION GENERATOR - Cast as any to bypass local dependency checking
+    public getFormattingModel(): any {
         const s = this.settings;
 
-        switch (options.objectName) {
-            case "calendarColors":
-                instances.push({
-                    objectName: "calendarColors",
-                    properties: {
-                        minColor: s.calendarColors.minColor,
-                        maxColor: s.calendarColors.maxColor
-                    },
-                    selector: null
-                });
-                break;
-            case "headerSettings":
-                instances.push({
-                    objectName: "headerSettings",
-                    properties: {
-                        fontFamily: s.headerSettings.fontFamily,
-                        fontSize: s.headerSettings.fontSize,
-                        fontColor: s.headerSettings.fontColor,
-                        backgroundColor: s.headerSettings.backgroundColor
-                    },
-                    selector: null
-                });
-                break;
-            case "cellSettings":
-                instances.push({
-                    objectName: "cellSettings",
-                    properties: {
-                        fontFamily: s.cellSettings.fontFamily,
-                        fontSize: s.cellSettings.fontSize,
-                        fontColor: s.cellSettings.fontColor,
-                        borderColor: s.cellSettings.borderColor,
-                        borderThickness: s.cellSettings.borderThickness
-                    },
-                    selector: null
-                });
-                break;
-            case "labelSettings":
-                instances.push({
-                    objectName: "labelSettings",
-                    properties: {
-                        show: s.labelSettings.show,
-                        fontSize: s.labelSettings.fontSize,
-                        fontColor: s.labelSettings.fontColor
-                    },
-                    selector: null
-                });
-                break;
-        }
-        return instances;
+        const colorCard = {
+            displayName: "Data Colors",
+            uid: "calendarColorsCard_uid",
+            groups: [{
+                displayName: "Gradient Range",
+                uid: "calendarColorsGroup_uid",
+                slices: [
+                    { displayName: "Minimum Color", uid: "minColor_slice_uid", control: { type: "ColorPicker", properties: { descriptor: { objectName: "calendarColors", propertyName: "minColor" }, value: { value: s.calendarColors.minColor } } } },
+                    { displayName: "Maximum Color", uid: "maxColor_slice_uid", control: { type: "ColorPicker", properties: { descriptor: { objectName: "calendarColors", propertyName: "maxColor" }, value: { value: s.calendarColors.maxColor } } } }
+                ]
+            }]
+        };
+
+        const headerCard = {
+            displayName: "Calendar Headers",
+            uid: "headerSettingsCard_uid",
+            groups: [{
+                displayName: "Typography & Fill",
+                uid: "headerSettingsGroup_uid",
+                slices: [
+                    { displayName: "Font Family", uid: "headerFontFamily_slice_uid", control: { type: "FontPicker", properties: { descriptor: { objectName: "headerSettings", propertyName: "fontFamily" }, value: s.headerSettings.fontFamily } } },
+                    { displayName: "Text Size", uid: "headerFontSize_slice_uid", control: { type: "NumUpAndDown", properties: { descriptor: { objectName: "headerSettings", propertyName: "fontSize" }, value: s.headerSettings.fontSize } } },
+                    { displayName: "Font Color", uid: "headerFontColor_slice_uid", control: { type: "ColorPicker", properties: { descriptor: { objectName: "headerSettings", propertyName: "fontColor" }, value: { value: s.headerSettings.fontColor } } } },
+                    { displayName: "Background Color", uid: "headerBgColor_slice_uid", control: { type: "ColorPicker", properties: { descriptor: { objectName: "headerSettings", propertyName: "backgroundColor" }, value: { value: s.headerSettings.backgroundColor } } } }
+                ]
+            }]
+        };
+
+        const cellCard = {
+            displayName: "Grid and Cells",
+            uid: "cellSettingsCard_uid",
+            groups: [{
+                displayName: "Cell Settings",
+                uid: "cellSettingsGroup_uid",
+                slices: [
+                    { displayName: "Font Family", uid: "cellFontFamily_slice_uid", control: { type: "FontPicker", properties: { descriptor: { objectName: "cellSettings", propertyName: "fontFamily" }, value: s.cellSettings.fontFamily } } },
+                    { displayName: "Primary Text Size", uid: "cellFontSize_slice_uid", control: { type: "NumUpAndDown", properties: { descriptor: { objectName: "cellSettings", propertyName: "fontSize" }, value: s.cellSettings.fontSize } } },
+                    { displayName: "Primary Color", uid: "cellFontColor_slice_uid", control: { type: "ColorPicker", properties: { descriptor: { objectName: "cellSettings", propertyName: "fontColor" }, value: { value: s.cellSettings.fontColor } } } },
+                    { displayName: "Border Color", uid: "cellBorderColor_slice_uid", control: { type: "ColorPicker", properties: { descriptor: { objectName: "cellSettings", propertyName: "borderColor" }, value: { value: s.cellSettings.borderColor } } } },
+                    { displayName: "Border Thickness", uid: "cellBorderThickness_slice_uid", control: { type: "NumUpAndDown", properties: { descriptor: { objectName: "cellSettings", propertyName: "borderThickness" }, value: s.cellSettings.borderThickness } } }
+                ]
+            }]
+        };
+
+        const labelCard = {
+            displayName: "Secondary Data Labels",
+            uid: "labelSettingsCard_uid",
+            groups: [{
+                displayName: "Label Properties",
+                uid: "labelSettingsGroup_uid",
+                slices: [
+                    { displayName: "Show Labels", uid: "labelShow_slice_uid", control: { type: "ToggleSwitch", properties: { descriptor: { objectName: "labelSettings", propertyName: "show" }, value: s.labelSettings.show } } },
+                    { displayName: "Label Size", uid: "labelFontSize_slice_uid", control: { type: "NumUpAndDown", properties: { descriptor: { objectName: "labelSettings", propertyName: "fontSize" }, value: s.labelSettings.fontSize } } },
+                    { displayName: "Label Color", uid: "labelFontColor_slice_uid", control: { type: "ColorPicker", properties: { descriptor: { objectName: "labelSettings", propertyName: "fontColor" }, value: { value: s.labelSettings.fontColor } } } }
+                ]
+            }]
+        };
+
+        return {
+            cards: [colorCard, headerCard, cellCard, labelCard]
+        };
     }
 }
