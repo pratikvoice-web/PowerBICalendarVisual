@@ -61,7 +61,7 @@
         },
         "fontSize": {
           "displayName": "Text Size",
-          "type": { "formatting": { "fontSize": true } }
+          "type": { "integer": true }
         },
         "fontColor": {
           "displayName": "Font Color",
@@ -107,7 +107,7 @@
         },
         "fontSize": {
           "displayName": "Label Size",
-          "type": { "formatting": { "fontSize": true } }
+          "type": { "integer": true }
         },
         "fontColor": {
           "displayName": "Label Color",
