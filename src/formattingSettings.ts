@@ -42,24 +42,24 @@ export class VisualSettings {
 
         if (objects.calendarColors) {
             const obj = objects.calendarColors;
-            if (obj.minColor?.["solid"]) settings.calendarColors.minColor = obj.minColor["solid"]["color"];
-            if (obj.maxColor?.["solid"]) settings.calendarColors.maxColor = obj.maxColor["solid"]["color"];
+            if (obj.minColor) settings.calendarColors.minColor = (obj.minColor as powerbi.Fill).solid.color;
+            if (obj.maxColor) settings.calendarColors.maxColor = (obj.maxColor as powerbi.Fill).solid.color;
         }
 
         if (objects.headerSettings) {
             const obj = objects.headerSettings;
             if (obj.fontFamily) settings.headerSettings.fontFamily = <string>obj.fontFamily;
             if (obj.fontSize) settings.headerSettings.fontSize = <number>obj.fontSize;
-            if (obj.fontColor?.["solid"]) settings.headerSettings.fontColor = obj.fontColor["solid"]["color"];
-            if (obj.backgroundColor?.["solid"]) settings.headerSettings.backgroundColor = obj.backgroundColor["solid"]["color"];
+            if (obj.fontColor) settings.headerSettings.fontColor = (obj.fontColor as powerbi.Fill).solid.color;
+            if (obj.backgroundColor) settings.headerSettings.backgroundColor = (obj.backgroundColor as powerbi.Fill).solid.color;
         }
 
         if (objects.cellSettings) {
             const obj = objects.cellSettings;
             if (obj.fontFamily) settings.cellSettings.fontFamily = <string>obj.fontFamily;
             if (obj.fontSize) settings.cellSettings.fontSize = <number>obj.fontSize;
-            if (obj.fontColor?.["solid"]) settings.cellSettings.fontColor = obj.fontColor["solid"]["color"];
-            if (obj.borderColor?.["solid"]) settings.cellSettings.borderColor = obj.borderColor["solid"]["color"];
+            if (obj.fontColor) settings.cellSettings.fontColor = (obj.fontColor as powerbi.Fill).solid.color;
+            if (obj.borderColor) settings.cellSettings.borderColor = (obj.borderColor as powerbi.Fill).solid.color;
             if (obj.borderThickness !== undefined) settings.cellSettings.borderThickness = <number>obj.borderThickness;
         }
 
@@ -67,7 +67,7 @@ export class VisualSettings {
             const obj = objects.labelSettings;
             if (obj.show !== undefined) settings.labelSettings.show = <boolean>obj.show;
             if (obj.fontSize) settings.labelSettings.fontSize = <number>obj.fontSize;
-            if (obj.fontColor?.["solid"]) settings.labelSettings.fontColor = obj.fontColor["solid"]["color"];
+            if (obj.fontColor) settings.labelSettings.fontColor = (obj.fontColor as powerbi.Fill).solid.color;
         }
 
         return settings;
