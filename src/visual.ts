@@ -236,7 +236,7 @@ export class Visual implements IVisual {
         });
     }
 
-    private syncSelectionState(nodes: any, selectionIds: powerbi.visuals.ISelectionId[], dataMap: any) {
+    private syncSelectionState(nodes: any, selectionIds: any[], dataMap: any) {
         if (!selectionIds || selectionIds.length === 0) {
             d3.selectAll(".calendar-day-cell").style("opacity", 1.0);
             return;
@@ -248,7 +248,7 @@ export class Visual implements IVisual {
             const metrics = dataMap[matchKey];
 
             if (metrics) {
-                const isSelected = selectionIds.some(sid => sid.equals(metrics.selectionId));
+                const isSelected = selectionIds.some(sid => (sid as any).equals(metrics.selectionId));
                 d3.select(nList[idx]).style("opacity", isSelected ? 1.0 : 0.3);
             }
         });
