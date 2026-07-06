@@ -2,6 +2,7 @@
   "name": "powerbi-calendar-visual",
   "version": "1.0.0",
   "description": "Advanced multi-measure custom calendar grid visual for Power BI.",
+  "license": "GPL-3.0-or-later",
   "engines": {
     "node": ">=18.0.0"
   },
