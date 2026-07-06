@@ -51,6 +51,69 @@
           "type": { "fill": { "solid": { "color": true } } }
         }
       }
+    },
+    "headerSettings": {
+      "displayName": "Calendar Headers",
+      "properties": {
+        "fontFamily": {
+          "displayName": "Font Family",
+          "type": { "formatting": { "fontFamily": true } }
+        },
+        "fontSize": {
+          "displayName": "Text Size",
+          "type": { "formatting": { "fontSize": true } }
+        },
+        "fontColor": {
+          "displayName": "Font Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "backgroundColor": {
+          "displayName": "Background Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        }
+      }
+    },
+    "cellSettings": {
+      "displayName": "Grid and Cells",
+      "properties": {
+        "fontFamily": {
+          "displayName": "Font Family",
+          "type": { "formatting": { "fontFamily": true } }
+        },
+        "fontSize": {
+          "displayName": "Primary Text Size",
+          "type": { "formatting": { "fontSize": true } }
+        },
+        "fontColor": {
+          "displayName": "Primary Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "borderColor": {
+          "displayName": "Border Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "borderThickness": {
+          "displayName": "Border Thickness",
+          "type": { "integer": true }
+        }
+      }
+    },
+    "labelSettings": {
+      "displayName": "Secondary Data Labels",
+      "properties": {
+        "show": {
+          "displayName": "Show Labels",
+          "type": { "bool": true }
+        },
+        "fontSize": {
+          "displayName": "Label Size",
+          "type": { "formatting": { "fontSize": true } }
+        },
+        "fontColor": {
+          "displayName": "Label Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        }
+      }
     }
   },
   "supportsHighlight": true,
