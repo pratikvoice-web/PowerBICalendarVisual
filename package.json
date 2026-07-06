@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Advanced multi-measure custom calendar grid visual for Power BI.",
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=18.0.0"
   },
   "scripts": {
     "pbiviz": "pbiviz",
