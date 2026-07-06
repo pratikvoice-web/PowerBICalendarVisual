@@ -1,6 +1,4 @@
-# README.md
-
-## Calendar Grid Pro
+# Calendar Grid Pro
 An enterprise-grade, high-performance custom calendar visualisation for Power BI. Built natively using TypeScript and D3.js to bypass web-sandbox layout constraints, this visual forces a rigid, responsive Monday-to-Sunday grid that maps multi-measure metrics directly onto temporal coordinates.
 
 ---
