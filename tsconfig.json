@@ -16,6 +16,7 @@
     ]
   },
   "files": [
+    "src/typings.d.ts",
     "src/visual.ts",
     "src/calendarEngine.ts",
     "src/formattingSettings.ts"
