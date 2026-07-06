@@ -5,7 +5,9 @@
     "guid": "PowerBICalendarVisualF1A2B3C4D5E6",
     "visualClassName": "Visual",
     "version": "1.0.0.0",
-    "description": "High-performance calendar grid supporting center-stage primary measures and responsive secondary metric arrays."
+    "description": "High-performance calendar grid supporting center-stage primary measures and responsive secondary metric arrays.",
+    "supportUrl": "https://github.com/yourusername/PowerBICalendarVisual/issues",
+    "gitHubUrl": "https://github.com/yourusername/PowerBICalendarVisual"
   },
   "author": {
     "name": "Developer",
