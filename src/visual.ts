@@ -38,7 +38,6 @@ export class Visual implements IVisual {
             .append("div")
             .attr("class", "calendar-visual-container");
 
-        // Centered dynamic MMMM-YYYY title element insertion point
         this.titleHeader = this.container.append("div")
             .attr("class", "calendar-title-header");
 
@@ -47,6 +46,29 @@ export class Visual implements IVisual {
         weekdays.forEach(day => this.headerRow.append("div").text(day));
 
         this.gridContainer = this.container.append("div").attr("class", "calendar-grid");
+    }
+
+    /**
+     * Extracts and applies precision configuration directly from Power BI metadata strings
+     * while preserving the required Indian locale formatting structure.
+     */
+    private formatNumericValue(value: number, formatString: string): string {
+        if (value === null || value === undefined) return "";
+        let decimals = 2; // Default fallback precision
+        
+        if (formatString) {
+            const match = formatString.match(/\.([0#]+)/);
+            if (match) {
+                decimals = match[1].length;
+            } else if (formatString.indexOf(".") === -1 && (formatString.indexOf("0") !== -1 || formatString.indexOf("#") !== -1)) {
+                decimals = 0;
+            }
+        }
+        
+        return value.toLocaleString("en-IN", {
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals
+        });
     }
 
     public update(options: VisualUpdateOptions) {
@@ -98,7 +120,8 @@ export class Visual implements IVisual {
             
             if (primaryMeasureIndex !== -1 && categorical.values[primaryMeasureIndex].values[i] !== null) {
                 primaryValue = <number>categorical.values[primaryMeasureIndex].values[i];
-                primaryValueText = primaryValue.toLocaleString("en-IN", { maximumFractionDigits: 2 });
+                // Apply dynamic metadata formatting to primary measure
+                primaryValueText = this.formatNumericValue(primaryValue, categorical.values[primaryMeasureIndex].source.format);
                 
                 if (primaryValue < globalMin) globalMin = primaryValue;
                 if (primaryValue > globalMax) globalMax = primaryValue;
@@ -111,7 +134,8 @@ export class Visual implements IVisual {
                 if (rawVal !== null) {
                     secondaryMetrics.push({
                         label: measureGroup.source.displayName,
-                        valueText: typeof rawVal === "number" ? rawVal.toLocaleString("en-IN", { maximumFractionDigits: 3 }) : <string>rawVal
+                        // Resolve dynamic metadata formats for each unique secondary column assignment
+                        valueText: typeof rawVal === "number" ? this.formatNumericValue(rawVal, measureGroup.source.format) : <string>rawVal
                     });
                 }
             });
@@ -142,7 +166,6 @@ export class Visual implements IVisual {
         const c = this.settings.cellSettings;
         const l = this.settings.labelSettings;
 
-        // Render Centered MMMM-YYYY Header Text dynamically
         const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         this.titleHeader
             .text(`${monthNames[referenceMonth]} ${referenceYear}`)
@@ -255,7 +278,7 @@ export class Visual implements IVisual {
                             .style("justify-content", "space-between");
 
                         row.append("span").style("font-weight", "600").text(`${m.label} `);
-                        row.append("span").style("font-weight", "700").style("color", "#222222").text(m.valueText);
+                        row.append("span").style("font-weight", "700").text(m.valueText);
                     });
                 }
 
@@ -332,7 +355,6 @@ export class Visual implements IVisual {
         });
     }
 
-    // MODERN FORMATTING MODEL - Cleanly structured with explicit '<any>' control mapping targets
     public getFormattingModel(): powerbi.visuals.FormattingModel {
         const s = this.settings;
 
