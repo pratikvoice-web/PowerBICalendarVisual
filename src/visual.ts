@@ -1,4 +1,5 @@
-import * as d3 from "d3";
+declare var require: any;
+const d3: any = require("d3");
 import powerbi from "powerbi-visuals-api";
 
 import VisualConstructorOptions = powerbi.extensibility.visual.VisualConstructorOptions;
@@ -6,6 +7,8 @@ import VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
 import IVisual = powerbi.extensibility.visual.IVisual;
 import IVisualHost = powerbi.extensibility.visual.IVisualHost;
 import ISelectionManager = powerbi.extensibility.ISelectionManager;
+import VisualObjectInstanceEnumeration = powerbi.VisualObjectInstanceEnumeration;
+import EnumerateVisualObjectInstancesOptions = powerbi.EnumerateVisualObjectInstancesOptions;
 
 import { CalendarEngine, CalendarDay } from "./calendarEngine";
 import { VisualSettings } from "./formattingSettings";
@@ -22,9 +25,9 @@ export class Visual implements IVisual {
     private target: HTMLElement;
     private host: IVisualHost;
     private selectionManager: ISelectionManager;
-    private container: d3.Selection<HTMLDivElement, any, any, any>;
-    private headerRow: d3.Selection<HTMLDivElement, any, any, any>;
-    private gridContainer: d3.Selection<HTMLDivElement, any, any, any>;
+    private container: any;
+    private headerRow: any;
+    private gridContainer: any;
     private settings: VisualSettings;
 
     constructor(options: VisualConstructorOptions) {
@@ -128,7 +131,7 @@ export class Visual implements IVisual {
         if (globalMin === Infinity) globalMin = 0;
         if (globalMax === -Infinity) globalMax = 1;
         
-        const colorScale = d3.scaleLinear<string>()
+        const colorScale = d3.scaleLinear()
             .domain([globalMin, globalMax])
             .range([this.settings.calendarColors.minColor, this.settings.calendarColors.maxColor]);
 
@@ -177,7 +180,6 @@ export class Visual implements IVisual {
                     event.stopPropagation();
                 });
 
-                // Correct Native Context Menu Binding (Enables Right-Click Drillthrough)
                 currentElement.on("contextmenu", (event) => {
                     this.selectionManager.showContextMenu(metrics.selectionId, {
                         x: event.clientX,
@@ -244,7 +246,6 @@ export class Visual implements IVisual {
         });
     }
 
-    // Modern Formatting Pane Engine for API v5.4.0 (Restores the Visual Tab Control Panel)
     public getFormattingModel(): powerbi.visuals.FormattingModel {
         const dataCard: any = {
             displayName: "Data Colors",
