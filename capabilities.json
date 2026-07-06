@@ -1,0 +1,57 @@
+{
+  "dataRoles": [
+    {
+      "displayName": "Date Field",
+      "name": "dateCategory",
+      "kind": "Grouping"
+    },
+    {
+      "displayName": "Primary Measure (Center)",
+      "name": "primaryMeasure",
+      "kind": "Measure"
+    },
+    {
+      "displayName": "Secondary Measures",
+      "name": "secondaryMeasures",
+      "kind": "Measure"
+    }
+  ],
+  "dataViewMappings": [
+    {
+      "conditions": [
+        {
+          "dateCategory": { "max": 1 },
+          "primaryMeasure": { "max": 1 },
+          "secondaryMeasures": { "min": 0 }
+        }
+      ],
+      "categorical": {
+        "categories": {
+          "for": { "in": "dateCategory" }
+        },
+        "values": {
+          "select": [
+            { "bind": { "to": "primaryMeasure" } },
+            { "bind": { "to": "secondaryMeasures" } }
+          ]
+        }
+      }
+    }
+  ],
+  "objects": {
+    "calendarColors": {
+      "displayName": "Data Colors",
+      "properties": {
+        "minColor": {
+          "displayName": "Minimum Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "maxColor": {
+          "displayName": "Maximum Color",
+          "type": { "fill": { "solid": { "color": true } } }
+        }
+      }
+    }
+  },
+  "privileges": []
+}
