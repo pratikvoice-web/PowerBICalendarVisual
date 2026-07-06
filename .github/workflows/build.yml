@@ -24,7 +24,7 @@ jobs:
       run: npm install
 
     - name: Compile and Package Visual Payload
-      run: npx pbiviz package --production
+      run: npx pbiviz package
 
     - name: Upload Compiled Visual Binary Artifact
       uses: actions/upload-artifact@v4
