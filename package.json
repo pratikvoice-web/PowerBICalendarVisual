@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "d3": "^7.8.5",
-    "powerbi-visuals-api": "~5.4.0"
+    "powerbi-visuals-api": "~3.8.0"
   },
   "devDependencies": {
     "@types/d3": "^7.4.3",
