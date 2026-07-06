@@ -6,8 +6,6 @@ import VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
 import IVisual = powerbi.extensibility.visual.IVisual;
 import IVisualHost = powerbi.extensibility.visual.IVisualHost;
 import ISelectionManager = powerbi.extensibility.ISelectionManager;
-import VisualObjectInstanceEnumeration = powerbi.VisualObjectInstanceEnumeration;
-import EnumerateVisualObjectInstancesOptions = powerbi.EnumerateVisualObjectInstancesOptions;
 
 import { CalendarEngine, CalendarDay } from "./calendarEngine";
 import { VisualSettings } from "./formattingSettings";
@@ -179,7 +177,7 @@ export class Visual implements IVisual {
                     event.stopPropagation();
                 });
 
-                // Intercept Right-Click and Route via the Selection Manager
+                // Correct Native Context Menu Binding (Enables Right-Click Drillthrough)
                 currentElement.on("contextmenu", (event) => {
                     this.selectionManager.showContextMenu(metrics.selectionId, {
                         x: event.clientX,
@@ -246,18 +244,49 @@ export class Visual implements IVisual {
         });
     }
 
-    public enumerateVisualObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstanceEnumeration {
-        const instances: powerbi.VisualObjectInstance[] = [];
-        if (options.objectName === "calendarColors") {
-            instances.push({
-                objectName: "calendarColors",
-                properties: {
-                    minColor: this.settings.calendarColors.minColor,
-                    maxColor: this.settings.calendarColors.maxColor
-                },
-                selector: null
-            });
-        }
-        return instances;
+    // Modern Formatting Pane Engine for API v5.4.0 (Restores the Visual Tab Control Panel)
+    public getFormattingModel(): powerbi.visuals.FormattingModel {
+        const dataCard: any = {
+            displayName: "Data Colors",
+            uid: "calendarColorsCard_uid",
+            groups: [{
+                displayName: "Gradient Range",
+                uid: "calendarColorsGroup_uid",
+                slices: [
+                    {
+                        displayName: "Minimum Color",
+                        uid: "minColor_slice_uid",
+                        control: {
+                            type: "ColorPicker",
+                            properties: {
+                                descriptor: {
+                                    objectName: "calendarColors",
+                                    propertyName: "minColor"
+                                },
+                                value: { value: this.settings.calendarColors.minColor }
+                            }
+                        }
+                    },
+                    {
+                        displayName: "Maximum Color",
+                        uid: "maxColor_slice_uid",
+                        control: {
+                            type: "ColorPicker",
+                            properties: {
+                                descriptor: {
+                                    objectName: "calendarColors",
+                                    propertyName: "maxColor"
+                                },
+                                value: { value: this.settings.calendarColors.maxColor }
+                            }
+                        }
+                    }
+                ]
+            }]
+        };
+
+        return {
+            cards: [dataCard]
+        };
     }
 }
