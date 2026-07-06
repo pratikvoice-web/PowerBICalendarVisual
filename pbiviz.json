@@ -13,7 +13,7 @@
     "name": "Developer",
     "email": "developer@yourdomain.com"
   },
-  "apiVersion": "5.4.0",
+  "apiVersion": "3.8.0",
   "assets": {
     "icon": "assets/icon.png"
   },
