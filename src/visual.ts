@@ -1,5 +1,4 @@
-declare var require: any;
-const d3: any = require("d3");
+import * as d3 from "d3";
 import powerbi from "powerbi-visuals-api";
 
 import VisualConstructorOptions = powerbi.extensibility.visual.VisualConstructorOptions;
@@ -7,15 +6,22 @@ import VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
 import IVisual = powerbi.extensibility.visual.IVisual;
 import IVisualHost = powerbi.extensibility.visual.IVisualHost;
 import ISelectionManager = powerbi.extensibility.ISelectionManager;
+import FormattingModel = powerbi.visuals.FormattingModel;
+import FormattingCard = powerbi.visuals.FormattingCard;
 
 import { CalendarEngine, CalendarDay } from "./calendarEngine";
 import { VisualSettings } from "./formattingSettings";
 
+interface SecondaryMetric {
+    label: string;
+    valueText: string;
+}
+
 interface ExtractedDataPoint {
     dateKey: string;
-    primaryValue: number;
+    primaryValue: number | null;
     primaryValueText: string;
-    secondaryMetrics: { label: string; valueText: string }[];
+    secondaryMetrics: SecondaryMetric[];
     selectionId: powerbi.visuals.ISelectionId;
 }
 
@@ -23,11 +29,11 @@ export class Visual implements IVisual {
     private target: HTMLElement;
     private host: IVisualHost;
     private selectionManager: ISelectionManager;
-    private container: any;
-    private titleHeader: any;
-    private headerRow: any;
-    private gridContainer: any;
-    private settings: VisualSettings;
+    private container: d3.Selection<HTMLDivElement, unknown, null, undefined>;
+    private titleHeader: d3.Selection<HTMLDivElement, unknown, null, undefined>;
+    private headerRow: d3.Selection<HTMLDivElement, unknown, null, undefined>;
+    private gridContainer: d3.Selection<HTMLDivElement, unknown, null, undefined>;
+    private settings: VisualSettings = new VisualSettings();
 
     constructor(options: VisualConstructorOptions) {
         this.target = options.element;
@@ -36,42 +42,43 @@ export class Visual implements IVisual {
 
         this.container = d3.select(this.target)
             .append("div")
-            .attr("class", "calendar-visual-container");
+            .classed("calendar-visual-container", true);
 
         this.titleHeader = this.container.append("div")
-            .attr("class", "calendar-title-header");
+            .classed("calendar-title-header", true);
 
-        this.headerRow = this.container.append("div").attr("class", "calendar-header-row");
+        this.headerRow = this.container.append("div")
+            .classed("calendar-header-row", true);
+
         const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-        weekdays.forEach(day => this.headerRow.append("div").text(day));
+        weekdays.forEach(day => {
+            this.headerRow.append("div").text(day);
+        });
 
-        this.gridContainer = this.container.append("div").attr("class", "calendar-grid");
+        this.gridContainer = this.container.append("div")
+            .classed("calendar-grid", true);
     }
 
-    /**
-     * Extracts and applies precision configuration directly from Power BI metadata strings
-     * while preserving the required Indian locale formatting structure.
-     */
-    private formatNumericValue(value: number, formatString: string): string {
+    private formatNumericValue(value: number | null | undefined, formatString?: string): string {
         if (value === null || value === undefined) return "";
-        let decimals = 2; // Default fallback precision
-        
+        let decimals = 2;
+
         if (formatString) {
             const match = formatString.match(/\.([0#]+)/);
             if (match) {
                 decimals = match[1].length;
-            } else if (formatString.indexOf(".") === -1 && (formatString.indexOf("0") !== -1 || formatString.indexOf("#") !== -1)) {
+            } else if (!formatString.includes(".") && (formatString.includes("0") || formatString.includes("#"))) {
                 decimals = 0;
             }
         }
-        
+
         return value.toLocaleString("en-IN", {
             minimumFractionDigits: decimals,
             maximumFractionDigits: decimals
         });
     }
 
-    public update(options: VisualUpdateOptions) {
+    public update(options: VisualUpdateOptions): void {
         if (!options.dataViews || !options.dataViews[0] || !options.dataViews[0].categorical) {
             this.gridContainer.selectAll("*").remove();
             return;
@@ -81,22 +88,22 @@ export class Visual implements IVisual {
         const categorical = dataView.categorical;
         this.settings = VisualSettings.parse(dataView);
 
-        if (!categorical.categories || !categorical.categories[0]) return;
+        if (!categorical?.categories || !categorical.categories[0]) return;
         const dateCategory = categorical.categories[0];
-
         const valuesMetadata = categorical.values || [];
+
         let primaryMeasureIndex = -1;
         const secondaryMeasureIndices: number[] = [];
 
         valuesMetadata.forEach((valGroup, idx) => {
-            if (valGroup.source.roles["primaryMeasure"]) {
+            if (valGroup.source.roles?.["primaryMeasure"]) {
                 primaryMeasureIndex = idx;
-            } else if (valGroup.source.roles["secondaryMeasures"]) {
+            } else if (valGroup.source.roles?.["secondaryMeasures"]) {
                 secondaryMeasureIndices.push(idx);
             }
         });
 
-        const dataMap: { [key: string]: ExtractedDataPoint } = {};
+        const dataMap: Record<string, ExtractedDataPoint> = {};
         let globalMin = Infinity;
         let globalMax = -Infinity;
         let referenceYear = new Date().getFullYear();
@@ -105,8 +112,8 @@ export class Visual implements IVisual {
 
         dateCategory.values.forEach((catValue, i) => {
             if (!catValue) return;
-            const rawDate = new Date(<string>catValue);
-            
+            const rawDate = new Date(String(catValue));
+
             if (!referenceDateFound) {
                 referenceYear = rawDate.getFullYear();
                 referenceMonth = rawDate.getMonth();
@@ -114,28 +121,28 @@ export class Visual implements IVisual {
             }
 
             const tzOffsetString = rawDate.toISOString().split("T")[0];
-            
-            let primaryValue = null;
+            let primaryValue: number | null = null;
             let primaryValueText = "";
-            
-            if (primaryMeasureIndex !== -1 && categorical.values[primaryMeasureIndex].values[i] !== null) {
-                primaryValue = <number>categorical.values[primaryMeasureIndex].values[i];
-                // Apply dynamic metadata formatting to primary measure
+
+            if (primaryMeasureIndex !== -1 && categorical.values?.[primaryMeasureIndex].values[i] !== null) {
+                primaryValue = Number(categorical.values[primaryMeasureIndex].values[i]);
                 primaryValueText = this.formatNumericValue(primaryValue, categorical.values[primaryMeasureIndex].source.format);
-                
+
                 if (primaryValue < globalMin) globalMin = primaryValue;
                 if (primaryValue > globalMax) globalMax = primaryValue;
             }
 
-            const secondaryMetrics: { label: string; valueText: string }[] = [];
+            const secondaryMetrics: SecondaryMetric[] = [];
             secondaryMeasureIndices.forEach(idx => {
-                const measureGroup = categorical.values[idx];
+                const measureGroup = categorical.values?.[idx];
+                if (!measureGroup) return;
                 const rawVal = measureGroup.values[i];
-                if (rawVal !== null) {
+                if (rawVal !== null && rawVal !== undefined) {
                     secondaryMetrics.push({
                         label: measureGroup.source.displayName,
-                        // Resolve dynamic metadata formats for each unique secondary column assignment
-                        valueText: typeof rawVal === "number" ? this.formatNumericValue(rawVal, measureGroup.source.format) : <string>rawVal
+                        valueText: typeof rawVal === "number"
+                            ? this.formatNumericValue(rawVal, measureGroup.source.format)
+                            : String(rawVal)
                     });
                 }
             });
@@ -154,11 +161,10 @@ export class Visual implements IVisual {
         });
 
         const monthGridData = CalendarEngine.generateMonthGrid(referenceYear, referenceMonth);
-
         if (globalMin === Infinity) globalMin = 0;
         if (globalMax === -Infinity) globalMax = 1;
-        
-        const colorScale = d3.scaleLinear()
+
+        const colorScale = d3.scaleLinear<string>()
             .domain([globalMin, globalMax])
             .range([this.settings.calendarColors.minColor, this.settings.calendarColors.maxColor]);
 
@@ -169,45 +175,21 @@ export class Visual implements IVisual {
         const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         this.titleHeader
             .text(`${monthNames[referenceMonth]} ${referenceYear}`)
-            .style("text-align", "center")
             .style("font-family", h.fontFamily)
             .style("font-size", `${h.fontSize + 4}px`)
-            .style("font-weight", "700")
             .style("color", h.fontColor)
-            .style("background-color", h.backgroundColor)
-            .style("padding", "10px 0")
-            .style("text-transform", "uppercase")
-            .style("letter-spacing", "0.5px")
-            .style("flex-shrink", "0");
-
-        this.container
-            .style("width", "100%")
-            .style("height", "100%")
-            .style("display", "flex")
-            .style("flex-direction", "column")
-            .style("box-sizing", "border-box")
-            .style("overflow-y", "auto");
+            .style("background-color", h.backgroundColor);
 
         this.headerRow
-            .style("display", "grid")
-            .style("grid-template-columns", "repeat(7, 1fr)")
-            .style("text-align", "center")
             .style("font-family", h.fontFamily)
             .style("font-size", `${h.fontSize}px`)
             .style("background-color", h.backgroundColor)
-            .style("border-bottom", `${c.borderThickness}px solid ${c.borderColor}`)
-            .style("padding", "8px 0")
-            .style("flex-shrink", "0");
+            .style("border-bottom", `${c.borderThickness}px solid ${c.borderColor}`);
 
         this.headerRow.selectAll("div")
-            .style("color", h.fontColor)
-            .style("font-weight", "600");
+            .style("color", h.fontColor);
 
         this.gridContainer
-            .style("display", "grid")
-            .style("grid-template-columns", "repeat(7, 1fr)")
-            .style("grid-auto-rows", "minmax(105px, 1fr)")
-            .style("flex-grow", "1")
             .style("gap", `${c.borderThickness}px`)
             .style("background-color", c.borderColor)
             .style("border", `${c.borderThickness}px solid ${c.borderColor}`);
@@ -220,76 +202,55 @@ export class Visual implements IVisual {
             .enter()
             .append("div")
             .attr("class", d => d.dayNumber === 0 ? "calendar-day-cell empty-cell" : "calendar-day-cell")
-            .style("background-color", d => d.dayNumber === 0 ? "#faf9f8" : "#ffffff")
-            .style("display", "flex")
-            .style("flex-direction", "column")
-            .style("justify-content", "space-between")
-            .style("padding", "6px")
-            .style("box-sizing", "border-box")
-            .style("position", "relative")
-            .style("transition", "opacity 0.15s ease-in-out");
+            .style("background-color", d => {
+                if (d.dayNumber === 0) return "#faf9f8";
+                if (!d.date) return "#ffffff";
+                const matchKey = d.date.toISOString().split("T")[0];
+                const metrics = dataMap[matchKey];
+                return (metrics && metrics.primaryValue !== null) ? colorScale(metrics.primaryValue) : "#ffffff";
+            });
 
         cellsSelection.each((d: CalendarDay, i, nodes) => {
             const currentElement = d3.select(nodes[i]);
             if (d.dayNumber === 0 || !d.date) return;
 
             currentElement.append("div")
-                .attr("class", "day-number")
-                .style("align-self", "flex-end")
-                .style("font-size", "11px")
-                .style("font-weight", "600")
-                .style("color", "#323130")
+                .classed("day-number", true)
                 .text(d.dayNumber);
 
             const matchKey = d.date.toISOString().split("T")[0];
             const metrics = dataMap[matchKey];
 
             if (metrics) {
-                if (metrics.primaryValue !== null) {
-                    currentElement.style("background-color", colorScale(metrics.primaryValue));
-                }
-
                 currentElement.append("div")
-                    .attr("class", "primary-measure-value")
+                    .classed("primary-measure-value", true)
                     .style("font-family", c.fontFamily)
                     .style("font-size", `${c.fontSize}px`)
                     .style("color", c.fontColor)
-                    .style("font-weight", "700")
-                    .style("text-align", "center")
-                    .style("margin", "auto 0")
-                    .style("word-break", "break-word")
                     .text(metrics.primaryValueText ? `₹${metrics.primaryValueText} Cr` : "");
 
                 if (metrics.secondaryMetrics.length > 0) {
                     const metricsWrapper = currentElement.append("div")
-                        .attr("class", "secondary-measures-list")
+                        .classed("secondary-measures-list", true)
                         .style("display", l.show ? "flex" : "none")
-                        .style("flex-direction", "column")
-                        .style("gap", "2px")
                         .style("font-size", `${l.fontSize}px`)
-                        .style("color", l.fontColor)
-                        .style("border-top", "1px solid rgba(0,0,0,0.05)")
-                        .style("padding-top", "4px");
+                        .style("color", l.fontColor);
 
                     metrics.secondaryMetrics.forEach(m => {
-                        const row = metricsWrapper.append("div")
-                            .attr("class", "secondary-metric-row")
-                            .style("display", "flex")
-                            .style("justify-content", "space-between");
-
-                        row.append("span").style("font-weight", "600").text(`${m.label} `);
-                        row.append("span").style("font-weight", "700").text(m.valueText);
+                        const row = metricsWrapper.append("div").classed("secondary-metric-row", true);
+                        row.append("span").classed("metric-label", true).text(`${m.label} `);
+                        row.append("span").classed("metric-value", true).style("color", "#222222").text(m.valueText);
                     });
                 }
 
-                currentElement.on("click", (event) => {
+                currentElement.on("click", (event: MouseEvent) => {
                     this.selectionManager.select(metrics.selectionId).then((ids) => {
                         this.syncSelectionState(nodes, ids, dataMap);
                     });
                     event.stopPropagation();
                 });
 
-                currentElement.on("contextmenu", (event) => {
+                currentElement.on("contextmenu", (event: MouseEvent) => {
                     this.selectionManager.showContextMenu(metrics.selectionId, {
                         x: event.clientX,
                         y: event.clientY
@@ -298,9 +259,9 @@ export class Visual implements IVisual {
                     event.stopPropagation();
                 });
 
-                currentElement.on("mouseover", (event) => {
+                currentElement.on("mouseover", (event: MouseEvent) => {
                     const tooltipItems = [
-                        { displayName: "Date", value: d.date.toLocaleDateString("en-IN") },
+                        { displayName: "Date", value: d.date?.toLocaleDateString("en-IN") ?? "" },
                         { displayName: "Primary Metric", value: metrics.primaryValueText || "No Data" }
                     ];
                     metrics.secondaryMetrics.forEach(sm => {
@@ -315,7 +276,7 @@ export class Visual implements IVisual {
                     });
                 });
 
-                currentElement.on("mousemove", (event) => {
+                currentElement.on("mousemove", (event: MouseEvent) => {
                     this.host.tooltipService.move({
                         coordinates: [event.clientX, event.clientY],
                         isTouchEvent: false,
@@ -337,81 +298,82 @@ export class Visual implements IVisual {
         });
     }
 
-    private syncSelectionState(nodes: any, selectionIds: any[], dataMap: any) {
+    private syncSelectionState(nodes: ArrayLike<Element>, selectionIds: powerbi.visuals.ISelectionId[], dataMap: Record<string, ExtractedDataPoint>): void {
         if (!selectionIds || selectionIds.length === 0) {
             d3.selectAll(".calendar-day-cell").style("opacity", 1.0);
             return;
         }
 
-        d3.selectAll(".calendar-day-cell").each((d: CalendarDay, idx, nList) => {
-            if (d.dayNumber === 0 || !d.date) return;
-            const matchKey = d.date.toISOString().split("T")[0];
+        d3.selectAll(".calendar-day-cell").each((d: unknown, idx) => {
+            const dayData = d as CalendarDay;
+            if (dayData.dayNumber === 0 || !dayData.date) return;
+            const matchKey = dayData.date.toISOString().split("T")[0];
             const metrics = dataMap[matchKey];
 
             if (metrics) {
-                const isSelected = selectionIds.some(sid => (sid as any).equals(metrics.selectionId));
-                d3.select(nList[idx]).style("opacity", isSelected ? 1.0 : 0.3);
+                const isSelected = selectionIds.some(sid => sid.equals(metrics.selectionId));
+                d3.select(nodes[idx]).style("opacity", isSelected ? 1.0 : 0.3);
             }
         });
     }
 
-    public getFormattingModel(): powerbi.visuals.FormattingModel {
+    public getFormattingModel(): FormattingModel {
         const s = this.settings;
 
-        const colorCard: powerbi.visuals.FormattingCard = {
+        const colorCard: FormattingCard = {
             displayName: "Data Colors",
             uid: "calendarColorsCard_uid",
             groups: [{
                 displayName: "Gradient Range",
                 uid: "calendarColorsGroup_uid",
                 slices: [
-                    { displayName: "Minimum Color", uid: "minColor_slice_uid", control: <any>{ type: "ColorPicker", properties: { descriptor: { objectName: "calendarColors", propertyName: "minColor" }, value: { value: s.calendarColors.minColor } } } },
-                    { displayName: "Maximum Color", uid: "maxColor_slice_uid", control: <any>{ type: "ColorPicker", properties: { descriptor: { objectName: "calendarColors", propertyName: "maxColor" }, value: { value: s.calendarColors.maxColor } } } }
+                    { displayName: "Minimum Color", uid: "minColor_slice_uid", control: { type: powerbi.visuals.FormattingComponent.ColorPicker, properties: { descriptor: { objectName: "calendarColors", propertyName: "minColor" }, value: { value: s.calendarColors.minColor } } } },
+                    { displayName: "Maximum Color", uid: "maxColor_slice_uid", control: { type: powerbi.visuals.FormattingComponent.ColorPicker, properties: { descriptor: { objectName: "calendarColors", propertyName: "maxColor" }, value: { value: s.calendarColors.maxColor } } } }
                 ]
             }]
         };
 
-        const headerCard: powerbi.visuals.FormattingCard = {
+        const headerCard: FormattingCard = {
             displayName: "Calendar Headers",
             uid: "headerSettingsCard_uid",
             groups: [{
                 displayName: "Typography & Fill",
                 uid: "headerSettingsGroup_uid",
                 slices: [
-                    { displayName: "Font Family", uid: "headerFontFamily_slice_uid", control: <any>{ type: "FontPicker", properties: { descriptor: { objectName: "headerSettings", propertyName: "fontFamily" }, value: s.headerSettings.fontFamily } } },
-                    { displayName: "Text Size", uid: "headerFontSize_slice_uid", control: <any>{ type: "NumUpDown", properties: { descriptor: { objectName: "headerSettings", propertyName: "fontSize" }, value: s.headerSettings.fontSize } } },
-                    { displayName: "Font Color", uid: "headerFontColor_slice_uid", control: <any>{ type: "ColorPicker", properties: { descriptor: { objectName: "headerSettings", propertyName: "fontColor" }, value: { value: s.headerSettings.fontColor } } } },
-                    { displayName: "Background Color", uid: "headerBgColor_slice_uid", control: <any>{ type: "ColorPicker", properties: { descriptor: { objectName: "headerSettings", propertyName: "backgroundColor" }, value: { value: s.headerSettings.backgroundColor } } } }
+                    { displayName: "Font Family", uid: "headerFontFamily_slice_uid", control: { type: powerbi.visuals.FormattingComponent.FontPicker, properties: { descriptor: { objectName: "headerSettings", propertyName: "fontFamily" }, value: s.headerSettings.fontFamily } } },
+                    { displayName: "Text Size", uid: "headerFontSize_slice_uid", control: { type: powerbi.visuals.FormattingComponent.NumUpDown, properties: { descriptor: { objectName: "headerSettings", propertyName: "fontSize" }, value: s.headerSettings.fontSize } } },
+                    { displayName: "Font Color", uid: "headerFontColor_slice_uid", control: { type: powerbi.visuals.FormattingComponent.ColorPicker, properties: { descriptor: { objectName: "headerSettings", propertyName: "fontColor" }, value: { value: s.headerSettings.fontColor } } } },
+                    { displayName: "Background Color", uid: "headerBgColor_slice_uid", control: { type: powerbi.visuals.FormattingComponent.ColorPicker, properties: { descriptor: { objectName: "headerSettings", propertyName: "backgroundColor" }, value: { value: s.headerSettings.backgroundColor } } } }
                 ]
             }]
         };
 
-        const cellCard: powerbi.visuals.FormattingCard = {
+        const cellCard: FormattingCard = {
             displayName: "Grid and Cells",
             uid: "cellSettingsCard_uid",
             groups: [{
                 displayName: "Cell Settings",
                 uid: "cellSettingsGroup_uid",
                 slices: [
-                    { displayName: "Font Family", uid: "cellFontFamily_slice_uid", control: <any>{ type: "FontPicker", properties: { descriptor: { objectName: "cellSettings", propertyName: "fontFamily" }, value: s.cellSettings.fontFamily } } },
-                    { displayName: "Primary Text Size", uid: "cellFontSize_slice_uid", control: <any>{ type: "NumUpDown", properties: { descriptor: { objectName: "cellSettings", propertyName: "fontSize" }, value: s.cellSettings.fontSize } } },
-                    { displayName: "Primary Color", uid: "cellFontColor_slice_uid", control: <any>{ type: "ColorPicker", properties: { descriptor: { objectName: "cellSettings", propertyName: "fontColor" }, value: { value: s.cellSettings.fontColor } } } },
-                    { displayName: "Border Color", uid: "cellBorderColor_slice_uid", control: <any>{ type: "ColorPicker", properties: { descriptor: { objectName: "cellSettings", propertyName: "borderColor" }, value: { value: s.cellSettings.borderColor } } } },
-                    { displayName: "Border Thickness", uid: "cellBorderThickness_slice_uid", control: <any>{ type: "NumUpDown", properties: { descriptor: { objectName: "cellSettings", propertyName: "borderThickness" }, value: s.cellSettings.borderThickness } } }
+                    { displayName: "Font Family", uid: "cellFontFamily_slice_uid", control: { type: powerbi.visuals.FormattingComponent.FontPicker, properties: { descriptor: { objectName: "cellSettings", propertyName: "fontFamily" }, value: s.cellSettings.fontFamily } } },
+                    { displayName: "Primary Text Size", uid: "cellFontSize_slice_uid", control: { type: powerbi.visuals.FormattingComponent.NumUpDown, properties: { descriptor: { objectName: "cellSettings", propertyName: "fontSize" }, value: s.cellSettings.fontSize } } },
+                    { displayName: "Primary Color", uid: "cellFontColor_slice_uid", control: { type: powerbi.visuals.FormattingComponent.ColorPicker, properties: { descriptor: { objectName: "cellSettings", propertyName: "fontColor" }, value: { value: s.cellSettings.fontColor } } } },
+                    { displayName: "Border Color", uid: "cellBorderColor_slice_uid", control: { type: powerbi.visuals.FormattingComponent.ColorPicker, properties: { descriptor: { objectName: "cellSettings", propertyName: "borderColor" }, value: { value: s.cellSettings.borderColor } } } },
+                    { displayName: "Border Thickness", uid: "cellBorderThickness_slice_uid", control: { type: powerbi.visuals.FormattingComponent.NumUpDown, properties: { descriptor: { objectName: "cellSettings", propertyName: "borderThickness" }, value: s.cellSettings.borderThickness } } }
                 ]
             }]
         };
 
-        const labelCard: powerbi.visuals.FormattingCard = {
+        const labelCard: FormattingCard = {
             displayName: "Secondary Data Labels",
             uid: "labelSettingsCard_uid",
             groups: [{
                 displayName: "Label Properties",
                 uid: "labelSettingsGroup_uid",
                 slices: [
-                    { displayName: "Show Labels", uid: "labelShow_slice_uid", control: <any>{ type: "ToggleSwitch", properties: { descriptor: { objectName: "labelSettings", propertyName: "show" }, value: s.labelSettings.show } } },
-                    { displayName: "Label Size", uid: "labelFontSize_slice_uid", control: <any>{ type: "NumUpDown", properties: { descriptor: { objectName: "labelSettings", propertyName: "fontSize" }, value: s.labelSettings.fontSize } } },
-                    { displayName: "Label Color", uid: "labelFontColor_slice_uid", control: <any>{ type: "ColorPicker", properties: { descriptor: { objectName: "labelSettings", propertyName: "fontColor" }, value: { value: s.labelSettings.fontColor } } } }
+                    { displayName: "Show Labels", uid: "labelShow_slice_uid", control: { type: powerbi.visuals.FormattingComponent.ToggleSwitch, properties: { descriptor: { objectName: "labelSettings", propertyName: "show" }, value: s.labelSettings.show } } },
+                    { displayName: "Label Size", uid: "labelFontSize_slice_uid", control: { type: powerbi.visuals.FormattingComponent.NumUpDown, properties: { descriptor: { objectName: "labelSettings", propertyName: "fontSize" }, value: s.labelSettings.fontSize } } },
+                    { displayName: "Label Color", uid: "labelFontColor_slice_uid", control: { type: powerbi.visuals.FormattingComponent.ColorPicker, properties: { descriptor: { objectName: "labelSettings", propertyName: "fontColor" }, value: { value: s.labelSettings.fontColor } } } }
                 ]
             }]
         };
