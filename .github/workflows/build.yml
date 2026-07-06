@@ -23,17 +23,13 @@ jobs:
     - name: Install Project Dependencies
       run: npm install
 
-    - name: Install Stable Power BI Visuals Tools Globally
-      run: sudo npm install -g powerbi-visuals-tools@5.3.0
-
-    - name: Verify Environment Compilation Setup
+    - name: Fix Global Compiler Tools Permissions
       run: |
-        node --version
-        npm --version
-        pbiviz --version
+        sudo mkdir -p /usr/local/lib/node_modules/powerbi-visuals-tools/certs
+        sudo chmod -R 777 /usr/local/lib/node_modules/
 
     - name: Compile and Package Visual Payload
-      run: pbiviz package
+      run: npx pbiviz package
 
     - name: Upload Compiled Visual Binary Artifact
       uses: actions/upload-artifact@v4
