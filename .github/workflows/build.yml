@@ -15,18 +15,13 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Setup Stable Node.js Environment
+    - name: Setup Aligned Node.js 18 Runtime
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '18'
 
     - name: Install Project Dependencies
       run: npm install
-
-    - name: Fix Global Compiler Tools Permissions
-      run: |
-        sudo mkdir -p /usr/local/lib/node_modules/powerbi-visuals-tools/certs
-        sudo chmod -R 777 /usr/local/lib/node_modules/
 
     - name: Compile and Package Visual Payload
       run: npx pbiviz package
@@ -34,7 +29,7 @@ jobs:
     - name: Upload Compiled Visual Binary Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Advanced-Calendar-Grid-Visual
+        name: Calendar-Grid-Pro-Visual
         path: dist/*.pbiviz
         if-no-files-found: error
         retention-days: 14
