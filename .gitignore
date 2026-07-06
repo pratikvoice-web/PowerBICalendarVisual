@@ -1,0 +1,17 @@
+# Dependency directories
+node_modules/
+.pnp/
+.pnp.js
+
+# Production / Build outputs
+dist/
+.tmp/
+out/
+build/
+*.pbiviz
+
+# IDE and System configurations
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
