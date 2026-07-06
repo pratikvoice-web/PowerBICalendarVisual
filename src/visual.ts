@@ -13,7 +13,7 @@ import { CalendarEngine, CalendarDay } from "./calendarEngine";
 import { VisualSettings } from "./formattingSettings";
 
 interface ExtractedDataPoint {
-    dateKey: string; // YYYY-MM-DD
+    dateKey: string;
     primaryValue: number;
     primaryValueText: string;
     secondaryMetrics: { label: string; valueText: string }[];
@@ -34,17 +34,14 @@ export class Visual implements IVisual {
         this.host = options.host;
         this.selectionManager = this.host.createSelectionManager();
 
-        // 1. Initialize master container div element
         this.container = d3.select(this.target)
             .append("div")
             .attr("class", "calendar-visual-container");
 
-        // 2. Initialize header tracking day labels
         this.headerRow = this.container.append("div").attr("class", "calendar-header-row");
         const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
         weekdays.forEach(day => this.headerRow.append("div").text(day));
 
-        // 3. Initialize grid container layout
         this.gridContainer = this.container.append("div").attr("class", "calendar-grid");
     }
 
@@ -58,11 +55,9 @@ export class Visual implements IVisual {
         const categorical = dataView.categorical;
         this.settings = VisualSettings.parse(dataView);
 
-        // 1. Verify existence of required Date Category assignment
         if (!categorical.categories || !categorical.categories[0]) return;
         const dateCategory = categorical.categories[0];
 
-        // 2. Parse out primary and continuous secondary measures arrays safely
         const valuesMetadata = categorical.values || [];
         let primaryMeasureIndex = -1;
         const secondaryMeasureIndices: number[] = [];
@@ -75,7 +70,6 @@ export class Visual implements IVisual {
             }
         });
 
-        // 3. Extract execution values into a map dictionary
         const dataMap: { [key: string]: ExtractedDataPoint } = {};
         let globalMin = Infinity;
         let globalMax = -Infinity;
@@ -87,14 +81,13 @@ export class Visual implements IVisual {
             if (!catValue) return;
             const rawDate = new Date(<string>catValue);
             
-            // Establish visual boundary coordinates based on first extracted valid timestamp context
             if (!referenceDateFound) {
                 referenceYear = rawDate.getFullYear();
                 referenceMonth = rawDate.getMonth();
                 referenceDateFound = true;
             }
 
-            const tzOffsetString = rawDate.toISOString().split("T")[0]; // Key form: YYYY-MM-DD
+            const tzOffsetString = rawDate.toISOString().split("T")[0];
             
             let primaryValue = null;
             let primaryValueText = "";
@@ -132,10 +125,8 @@ export class Visual implements IVisual {
             };
         });
 
-        // 4. Generate visual layout coordinates using the math engine
         const monthGridData = CalendarEngine.generateMonthGrid(referenceYear, referenceMonth);
 
-        // 5. Construct D3 Linear Gradient Scale mapping
         if (globalMin === Infinity) globalMin = 0;
         if (globalMax === -Infinity) globalMax = 1;
         
@@ -143,7 +134,6 @@ export class Visual implements IVisual {
             .domain([globalMin, globalMax])
             .range([this.settings.calendarColors.minColor, this.settings.calendarColors.maxColor]);
 
-        // 6. Bind data array to DOM grid container
         this.gridContainer.selectAll("*").remove();
 
         const cellsSelection = this.gridContainer
@@ -153,12 +143,10 @@ export class Visual implements IVisual {
             .append("div")
             .attr("class", d => d.dayNumber === 0 ? "calendar-day-cell empty-cell" : "calendar-day-cell");
 
-        // 7. Inject metric structural text tracking into DOM elements
         cellsSelection.each((d: CalendarDay, i, nodes) => {
             const currentElement = d3.select(nodes[i]);
             if (d.dayNumber === 0 || !d.date) return;
 
-            // Render top-right day label context
             currentElement.append("div")
                 .attr("class", "day-number")
                 .text(d.dayNumber);
@@ -167,27 +155,23 @@ export class Visual implements IVisual {
             const metrics = dataMap[matchKey];
 
             if (metrics) {
-                // Apply calculated threshold cell tinting
                 if (metrics.primaryValue !== null) {
                     currentElement.style("background-color", colorScale(metrics.primaryValue));
                 }
 
-                // Append center stage label metrics
                 currentElement.append("div")
                     .attr("class", "primary-measure-value")
                     .text(metrics.primaryValueText ? `₹${metrics.primaryValueText} Cr` : "");
 
-                // Append bottom layout list tracking
                 if (metrics.secondaryMetrics.length > 0) {
                     const metricsWrapper = currentElement.append("div").attr("class", "secondary-measures-list");
                     metrics.secondaryMetrics.forEach(m => {
                         const row = metricsWrapper.append("div").attr("class", "secondary-metric-row");
-                        row.append("span").attr("class", "metric-label").text(`${m.label}:`);
+                        row.append("span").attr("class", "metric-label").text(`${m.label} `);
                         row.append("span").attr("class", "metric-value").text(m.valueText);
                     });
                 }
 
-                // 8. Bind Selection Manager event hooks to handle cross-filtering natively
                 currentElement.on("click", (event) => {
                     this.selectionManager.select(metrics.selectionId).then((ids) => {
                         this.syncSelectionState(nodes, ids, dataMap);
@@ -195,7 +179,16 @@ export class Visual implements IVisual {
                     event.stopPropagation();
                 });
 
-                // 9. Wire native Tooltip Service interactions
+                // Intercept Right-Click and Route via the Selection Manager
+                currentElement.on("contextmenu", (event) => {
+                    this.selectionManager.showContextMenu(metrics.selectionId, {
+                        x: event.clientX,
+                        y: event.clientY
+                    });
+                    event.preventDefault();
+                    event.stopPropagation();
+                });
+
                 currentElement.on("mouseover", (event) => {
                     const tooltipItems = [
                         { displayName: "Date", value: d.date.toLocaleDateString("en-IN") },
@@ -228,7 +221,6 @@ export class Visual implements IVisual {
             }
         });
 
-        // Clear filter selection when canvas background space is clicked
         this.container.on("click", () => {
             this.selectionManager.clear().then(() => {
                 d3.selectAll(".calendar-day-cell").style("opacity", 1.0);
