@@ -1,0 +1,45 @@
+name: Compile Power BI Visual
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-pbiviz:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js 24
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+        cache: 'npm'
+
+    - name: Install Project Dependencies
+      run: npm install
+
+    - name: Install Power BI Visuals Tools Globally
+      run: sudo npm install -g powerbi-visuals-tools
+
+    - name: Verify Environment Compilation Setup
+      run: |
+        node --version
+        npm --version
+        pbiviz --version
+
+    - name: Compile and Package Visual Payload
+      run: pbiviz package
+
+    - name: Upload Compiled Visual Binary Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Advanced-Calendar-Grid-Visual
+        path: dist/*.pbiviz
+        if-no-files-found: error
+        retention-days: 14
