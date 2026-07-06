@@ -1,4 +1,3 @@
-import "@babel/polyfill";
 import * as d3 from "d3";
 import powerbi from "powerbi-visuals-api";
 
@@ -237,7 +236,7 @@ export class Visual implements IVisual {
         });
     }
 
-    private syncSelectionState(nodes: any[], selectionIds: powerbi.visuals.ISelectionId[], dataMap: any) {
+    private syncSelectionState(nodes: any, selectionIds: powerbi.visuals.ISelectionId[], dataMap: any) {
         if (!selectionIds || selectionIds.length === 0) {
             d3.selectAll(".calendar-day-cell").style("opacity", 1.0);
             return;
