@@ -14,7 +14,9 @@
       "./node_modules/@types"
     ]
   },
-  "include": [
-    "src/**/*"
+  "files": [
+    "src/visual.ts",
+    "src/calendarEngine.ts",
+    "src/formattingSettings.ts"
   ]
 }
