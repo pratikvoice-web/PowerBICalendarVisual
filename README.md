@@ -59,3 +59,9 @@ The visual exposes comprehensive configuration controls within the **Visual** pr
 
 ### 4. Secondary Data Labels
 * Features a hard toggle to hide or show secondary metric strings instantly, alongside standalone font size and color controls to ensure dashboard readability.
+
+## License
+
+This project is licensed under the GNU General Public License v3.0 (GPL-3.0) - see the [LICENSE](LICENSE) file for details. 
+
+Commercial entities wishing to embed, wrap, or utilize Calendar Grid Pro within proprietary, closed-source software distributions must secure a separate commercial licensing agreement from the author.
