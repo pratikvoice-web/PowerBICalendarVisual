@@ -7,6 +7,8 @@ import VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
 import IVisual = powerbi.extensibility.visual.IVisual;
 import IVisualHost = powerbi.extensibility.visual.IVisualHost;
 import ISelectionManager = powerbi.extensibility.ISelectionManager;
+import VisualObjectInstanceEnumeration = powerbi.VisualObjectInstanceEnumeration;
+import EnumerateVisualObjectInstancesOptions = powerbi.EnumerateVisualObjectInstancesOptions;
 
 import { CalendarEngine, CalendarDay } from "./calendarEngine";
 import { VisualSettings } from "./formattingSettings";
@@ -33,6 +35,7 @@ export class Visual implements IVisual {
         this.host = options.host;
         this.selectionManager = this.host.createSelectionManager();
 
+        // Base structural initialization
         this.container = d3.select(this.target)
             .append("div")
             .attr("class", "calendar-visual-container");
@@ -44,92 +47,6 @@ export class Visual implements IVisual {
         this.gridContainer = this.container.append("div").attr("class", "calendar-grid");
     }
 
-    private injectDynamicStyles() {
-        let styleElement = document.getElementById("pbi-calendar-runtime-styles");
-        if (!styleElement) {
-            styleElement = document.createElement("style");
-            styleElement.id = "pbi-calendar-runtime-styles";
-            document.head.appendChild(styleElement);
-        }
-
-        const h = this.settings.headerSettings;
-        const c = this.settings.cellSettings;
-        const l = this.settings.labelSettings;
-
-        styleElement.innerHTML = `
-            .calendar-visual-container {
-                width: 100% !important;
-                height: 100% !important;
-                display: flex !important;
-                flex-direction: column !important;
-                box-sizing: border-box !important;
-            }
-            .calendar-header-row {
-                display: grid !important;
-                grid-template-columns: repeat(7, 1fr) !important;
-                text-align: center !important;
-                font-family: ${h.fontFamily} !important;
-                font-size: ${h.fontSize}px !important;
-                background-color: ${h.backgroundColor} !important;
-                border-bottom: ${c.borderThickness}px solid ${c.borderColor} !important;
-                padding: 6px 0 !important;
-            }
-            .calendar-header-row div {
-                color: ${h.fontColor} !important;
-                font-weight: 600 !important;
-            }
-            .calendar-grid {
-                display: grid !important;
-                grid-template-columns: repeat(7, 1fr) !important;
-                grid-auto-rows: 1fr !important;
-                flex-grow: 1 !important;
-                gap: ${c.borderThickness}px !important;
-                background-color: ${c.borderColor} !important;
-                border: ${c.borderThickness}px solid ${c.borderColor} !important;
-            }
-            .calendar-day-cell {
-                background-color: #ffffff !important;
-                display: flex !important;
-                flex-direction: column !important;
-                justify-content: space-between !important;
-                padding: 6px !important;
-                box-sizing: border-box !important;
-                position: relative !important;
-            }
-            .empty-cell {
-                background-color: #faf9f8 !important;
-            }
-            .day-number {
-                align-self: flex-end !important;
-                font-size: 10px !important;
-                font-weight: 600 !important;
-                color: #605e5c !important;
-            }
-            .primary-measure-value {
-                font-family: ${c.fontFamily} !important;
-                font-size: ${c.fontSize}px !important;
-                color: ${c.fontColor} !important;
-                font-weight: 700 !important;
-                text-align: center !important;
-                margin: auto 0 !important;
-                word-break: break-word !important;
-            }
-            .secondary-measures-list {
-                display: ${l.show ? "flex" : "none"} !important;
-                flex-direction: column !important;
-                gap: 2px !important;
-                font-size: ${l.fontSize}px !important;
-                color: ${l.fontColor} !important;
-                border-top: 1px solid rgba(0,0,0,0.05) !important;
-                padding-top: 4px !important;
-            }
-            .secondary-metric-row {
-                display: flex !important;
-                justify-content: space-between !important;
-            }
-        `;
-    }
-
     public update(options: VisualUpdateOptions) {
         if (!options.dataViews || !options.dataViews[0] || !options.dataViews[0].categorical) {
             this.gridContainer.selectAll("*").remove();
@@ -139,9 +56,6 @@ export class Visual implements IVisual {
         const dataView = options.dataViews[0];
         const categorical = dataView.categorical;
         this.settings = VisualSettings.parse(dataView);
-
-        // Inject compiled runtime layout adjustments
-        this.injectDynamicStyles();
 
         if (!categorical.categories || !categorical.categories[0]) return;
         const dateCategory = categorical.categories[0];
@@ -222,6 +136,41 @@ export class Visual implements IVisual {
             .domain([globalMin, globalMax])
             .range([this.settings.calendarColors.minColor, this.settings.calendarColors.maxColor]);
 
+        // Enforce layout boundaries explicitly inline to prevent container stacking issues
+        const h = this.settings.headerSettings;
+        const c = this.settings.cellSettings;
+        const l = this.settings.labelSettings;
+
+        this.container
+            .style("width", "100%")
+            .style("height", "100%")
+            .style("display", "flex")
+            .style("flex-direction", "column")
+            .style("box-sizing", "border-box");
+
+        this.headerRow
+            .style("display", "grid")
+            .style("grid-template-columns", "repeat(7, 1fr)")
+            .style("text-align", "center")
+            .style("font-family", h.fontFamily)
+            .style("font-size", `${h.fontSize}px`)
+            .style("background-color", h.backgroundColor)
+            .style("border-bottom", `${c.borderThickness}px solid ${c.borderColor}`)
+            .style("padding", "8px 0");
+
+        this.headerRow.selectAll("div")
+            .style("color", h.fontColor)
+            .style("font-weight", "600");
+
+        this.gridContainer
+            .style("display", "grid")
+            .style("grid-template-columns", "repeat(7, 1fr)")
+            .style("grid-auto-rows", "1fr")
+            .style("flex-grow", "1")
+            .style("gap", `${c.borderThickness}px`)
+            .style("background-color", c.borderColor)
+            .style("border", `${c.borderThickness}px solid ${c.borderColor}`);
+
         this.gridContainer.selectAll("*").remove();
 
         const cellsSelection = this.gridContainer
@@ -229,7 +178,15 @@ export class Visual implements IVisual {
             .data(monthGridData)
             .enter()
             .append("div")
-            .attr("class", d => d.dayNumber === 0 ? "calendar-day-cell empty-cell" : "calendar-day-cell");
+            .attr("class", d => d.dayNumber === 0 ? "calendar-day-cell empty-cell" : "calendar-day-cell")
+            .style("background-color", d => d.dayNumber === 0 ? "#faf9f8" : "#ffffff")
+            .style("display", "flex")
+            .style("flex-direction", "column")
+            .style("justify-content", "space-between")
+            .style("padding", "6px")
+            .style("box-sizing", "border-box")
+            .style("position", "relative")
+            .style("transition", "opacity 0.15s ease-in-out");
 
         cellsSelection.each((d: CalendarDay, i, nodes) => {
             const currentElement = d3.select(nodes[i]);
@@ -237,6 +194,10 @@ export class Visual implements IVisual {
 
             currentElement.append("div")
                 .attr("class", "day-number")
+                .style("align-self", "flex-end")
+                .style("font-size", "11px")
+                .style("font-weight", "600")
+                .style("color", "#323130")
                 .text(d.dayNumber);
 
             const matchKey = d.date.toISOString().split("T")[0];
@@ -249,14 +210,34 @@ export class Visual implements IVisual {
 
                 currentElement.append("div")
                     .attr("class", "primary-measure-value")
+                    .style("font-family", c.fontFamily)
+                    .style("font-size", `${c.fontSize}px`)
+                    .style("color", c.fontColor)
+                    .style("font-weight", "700")
+                    .style("text-align", "center")
+                    .style("margin", "auto 0")
+                    .style("word-break", "break-word")
                     .text(metrics.primaryValueText ? `₹${metrics.primaryValueText} Cr` : "");
 
                 if (metrics.secondaryMetrics.length > 0) {
-                    const metricsWrapper = currentElement.append("div").attr("class", "secondary-measures-list");
+                    const metricsWrapper = currentElement.append("div")
+                        .attr("class", "secondary-measures-list")
+                        .style("display", l.show ? "flex" : "none")
+                        .style("flex-direction", "column")
+                        .style("gap", "2px")
+                        .style("font-size", `${l.fontSize}px`)
+                        .style("color", l.fontColor)
+                        .style("border-top", "1px solid rgba(0,0,0,0.05)")
+                        .style("padding-top", "4px");
+
                     metrics.secondaryMetrics.forEach(m => {
-                        const row = metricsWrapper.append("div").attr("class", "secondary-metric-row");
-                        row.append("span").attr("class", "metric-label").text(`${m.label} `);
-                        row.append("span").attr("class", "metric-value").text(m.valueText);
+                        const row = metricsWrapper.append("div")
+                            .attr("class", "secondary-metric-row")
+                            .style("display", "flex")
+                            .style("justify-content", "space-between");
+
+                        row.append("span").style("font-weight", "600").text(`${m.label} `);
+                        row.append("span").style("font-weight", "700").style("color", "#222222").text(m.valueText);
                     });
                 }
 
@@ -333,125 +314,59 @@ export class Visual implements IVisual {
         });
     }
 
-    public getFormattingModel(): powerbi.visuals.FormattingModel {
+    // Standard Property Mapping Engine (Restores full typography, layout, and visibility parameters cleanly)
+    public enumerateVisualObjectInstances(options: EnumerateVisualObjectInstancesOptions): VisualObjectInstanceEnumeration {
+        const instances: powerbi.VisualObjectInstance[] = [];
         const s = this.settings;
 
-        const colorCard: powerbi.visuals.FormattingCard = {
-            displayName: "Data Colors",
-            uid: "calendarColorsCard_uid",
-            groups: [{
-                displayName: "Gradient Thresholds",
-                uid: "calendarColorsGroup_uid",
-                slices: [
-                    {
-                        displayName: "Minimum Color",
-                        uid: "minColor_slice_uid",
-                        control: { type: "ColorPicker", properties: { descriptor: { objectName: "calendarColors", propertyName: "minColor" }, value: { value: s.calendarColors.minColor } } }
+        switch (options.objectName) {
+            case "calendarColors":
+                instances.push({
+                    objectName: "calendarColors",
+                    properties: {
+                        minColor: s.calendarColors.minColor,
+                        maxColor: s.calendarColors.maxColor
                     },
-                    {
-                        displayName: "Maximum Color",
-                        uid: "maxColor_slice_uid",
-                        control: { type: "ColorPicker", properties: { descriptor: { objectName: "calendarColors", propertyName: "maxColor" }, value: { value: s.calendarColors.maxColor } } }
-                    }
-                ]
-            }]
-        };
-
-        const headerCard: powerbi.visuals.FormattingCard = {
-            displayName: "Calendar Headers",
-            uid: "headerSettingsCard_uid",
-            groups: [{
-                displayName: "Typography & Fill",
-                uid: "headerSettingsGroup_uid",
-                slices: [
-                    {
-                        displayName: "Font Family",
-                        uid: "headerFontFamily_slice_uid",
-                        control: { type: "FontPicker", properties: { descriptor: { objectName: "headerSettings", propertyName: "fontFamily" }, value: s.headerSettings.fontFamily } }
+                    selector: null
+                });
+                break;
+            case "headerSettings":
+                instances.push({
+                    objectName: "headerSettings",
+                    properties: {
+                        fontFamily: s.headerSettings.fontFamily,
+                        fontSize: s.headerSettings.fontSize,
+                        fontColor: s.headerSettings.fontColor,
+                        backgroundColor: s.headerSettings.backgroundColor
                     },
-                    {
-                        displayName: "Text Size",
-                        uid: "headerFontSize_slice_uid",
-                        control: { type: "NumUpAndDown", properties: { descriptor: { objectName: "headerSettings", propertyName: "fontSize" }, value: s.headerSettings.fontSize } }
+                    selector: null
+                });
+                break;
+            case "cellSettings":
+                instances.push({
+                    objectName: "cellSettings",
+                    properties: {
+                        fontFamily: s.cellSettings.fontFamily,
+                        fontSize: s.cellSettings.fontSize,
+                        fontColor: s.cellSettings.fontColor,
+                        borderColor: s.cellSettings.borderColor,
+                        borderThickness: s.cellSettings.borderThickness
                     },
-                    {
-                        displayName: "Font Color",
-                        uid: "headerFontColor_slice_uid",
-                        control: { type: "ColorPicker", properties: { descriptor: { objectName: "headerSettings", propertyName: "fontColor" }, value: { value: s.headerSettings.fontColor } } }
+                    selector: null
+                });
+                break;
+            case "labelSettings":
+                instances.push({
+                    objectName: "labelSettings",
+                    properties: {
+                        show: s.labelSettings.show,
+                        fontSize: s.labelSettings.fontSize,
+                        fontColor: s.labelSettings.fontColor
                     },
-                    {
-                        displayName: "Background Color",
-                        uid: "headerBgColor_slice_uid",
-                        control: { type: "ColorPicker", properties: { descriptor: { objectName: "headerSettings", propertyName: "backgroundColor" }, value: { value: s.headerSettings.backgroundColor } } }
-                    }
-                ]
-            }]
-        };
-
-        const cellCard: powerbi.visuals.FormattingCard = {
-            displayName: "Grid and Cells",
-            uid: "cellSettingsCard_uid",
-            groups: [{
-                displayName: "Cell Settings",
-                uid: "cellSettingsGroup_uid",
-                slices: [
-                    {
-                        displayName: "Font Family",
-                        uid: "cellFontFamily_slice_uid",
-                        control: { type: "FontPicker", properties: { descriptor: { objectName: "cellSettings", propertyName: "fontFamily" }, value: s.cellSettings.fontFamily } }
-                    },
-                    {
-                        displayName: "Primary Text Size",
-                        uid: "cellFontSize_slice_uid",
-                        control: { type: "NumUpAndDown", properties: { descriptor: { objectName: "cellSettings", propertyName: "fontSize" }, value: s.cellSettings.fontSize } }
-                    },
-                    {
-                        displayName: "Primary Color",
-                        uid: "cellFontColor_slice_uid",
-                        control: { type: "ColorPicker", properties: { descriptor: { objectName: "cellSettings", propertyName: "fontColor" }, value: { value: s.cellSettings.fontColor } } }
-                    },
-                    {
-                        displayName: "Border Color",
-                        uid: "cellBorderColor_slice_uid",
-                        control: { type: "ColorPicker", properties: { descriptor: { objectName: "cellSettings", propertyName: "borderColor" }, value: { value: s.cellSettings.borderColor } } }
-                    },
-                    {
-                        displayName: "Border Thickness",
-                        uid: "cellBorderThickness_slice_uid",
-                        control: { type: "NumUpAndDown", properties: { descriptor: { objectName: "cellSettings", propertyName: "borderThickness" }, value: s.cellSettings.borderThickness } }
-                    }
-                ]
-            }]
-        };
-
-        const labelCard: powerbi.visuals.FormattingCard = {
-            displayName: "Secondary Data Labels",
-            uid: "labelSettingsCard_uid",
-            groups: [{
-                displayName: "Label Properties",
-                uid: "labelSettingsGroup_uid",
-                slices: [
-                    {
-                        displayName: "Show Labels",
-                        uid: "labelShow_slice_uid",
-                        control: { type: "ToggleSwitch", properties: { descriptor: { objectName: "labelSettings", propertyName: "show" }, value: s.labelSettings.show } }
-                    },
-                    {
-                        displayName: "Label Size",
-                        uid: "labelFontSize_slice_uid",
-                        control: { type: "NumUpAndDown", properties: { descriptor: { objectName: "labelSettings", propertyName: "fontSize" }, value: s.labelSettings.fontSize } }
-                    },
-                    {
-                        displayName: "Label Color",
-                        uid: "labelFontColor_slice_uid",
-                        control: { type: "ColorPicker", properties: { descriptor: { objectName: "labelSettings", propertyName: "fontColor" }, value: { value: s.labelSettings.fontColor } } }
-                    }
-                ]
-            }]
-        };
-
-        return {
-            cards: [colorCard, headerCard, cellCard, labelCard]
-        };
+                    selector: null
+                });
+                break;
+        }
+        return instances;
     }
 }
