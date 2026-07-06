@@ -4,8 +4,12 @@
     "displayName": "Advanced Calendar Grid",
     "guid": "PowerBICalendarVisualF1A2B3C4D5E6",
     "visualClassName": "Visual",
-    "version": "1.0.0",
+    "version": "1.0.0.0",
     "description": "High-performance calendar grid supporting center-stage primary measures and responsive secondary metric arrays."
+  },
+  "author": {
+    "name": "Developer",
+    "email": "developer@yourdomain.com"
   },
   "apiVersion": "5.4.0",
   "assets": {
