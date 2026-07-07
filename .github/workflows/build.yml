@@ -20,7 +20,7 @@ jobs:
       with:
         node-version: '18'
 
-    - name: Install Project Dependencies
+    - name: Install Dependencies & Patch Webpack
       run: npm install
 
     - name: Compile and Package Visual Payload
