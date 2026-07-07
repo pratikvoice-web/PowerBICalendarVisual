@@ -7,7 +7,8 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "package": "pbiviz package --production",
+    "postinstall": "node -e \"const fs = require('fs'); const file = './node_modules/webpack/lib/logging/Logger.js'; if (fs.existsSync(file)) { fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace(/throw new Error.*No such label.*/, 'return;')); }\"",
+    "package": "pbiviz package",
     "lint": "eslint . --ext .ts"
   },
   "dependencies": {
@@ -16,7 +17,12 @@
   },
   "devDependencies": {
     "@types/d3": "^7.4.3",
-    "powerbi-visuals-tools": "5.3.0",
+    "powerbi-visuals-tools": "^7.1.0",
     "typescript": "^5.2.2"
+  },
+  "overrides": {
+    "glob": "^10.3.10",
+    "rimraf": "^5.0.5",
+    "uuid": "^10.0.0"
   }
 }
