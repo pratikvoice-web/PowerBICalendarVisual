@@ -4,10 +4,10 @@
   "description": "Advanced multi-measure custom calendar grid visual for Power BI.",
   "license": "GPL-3.0-or-later",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
   },
   "scripts": {
-    "postinstall": "node -e \"const fs = require('fs'); const file = './node_modules/webpack/lib/logging/Logger.js'; if (fs.existsSync(file)) { fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace(/throw new Error.*No such label.*/, 'return;')); }\"",
+    "postinstall": "node -e \"const fs=require('fs');const files=['./node_modules/webpack/lib/logging/Logger.js','./node_modules/powerbi-visuals-tools/node_modules/webpack/lib/logging/Logger.js'];files.forEach(f=>{if(fs.existsSync(f)){fs.writeFileSync(f,fs.readFileSync(f,'utf8').replace(/throw new Error\\(\\`No such label.*/g,'return;'));}});\"",
     "package": "pbiviz package",
     "lint": "eslint . --ext .ts"
   },
@@ -23,6 +23,6 @@
   "overrides": {
     "glob": "^10.3.10",
     "rimraf": "^5.0.5",
-    "uuid": "^10.0.0"
+    "uuid": "^11.0.0"
   }
 }
